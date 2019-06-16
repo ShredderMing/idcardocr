@@ -7,6 +7,7 @@ import socketserver
 import cv2, time
 import uuid
 import cgi
+import urllib
 
 def process(img_name):
     try:
@@ -30,11 +31,15 @@ class S(BaseHTTPRequestHandler):
         #self.end_headers()
 
     def do_GET(self):
+        url = self.path.rsplit('?url=', 1)[-1]
+        print(url)
+        filename = uuid.uuid1();
+        urllib.request.urlretrieve(url, "tmp/%s.jpg"%filename)
+        result = process("tmp/%s.jpg"%filename)
         self._set_headers()
-        # self.wfile.write("<html><body><h1>hi!</h1></body></html>")
-
-    def do_HEAD(self):
-        self._set_headers()
+        self.send_header("Content-Length", str(len(json.dumps(result).encode('utf-8'))))
+        self.end_headers()
+        self.wfile.write(json.dumps(result).encode('utf-8'))
 
     def do_POST(self):
         #content_length = int(self.headers['Content-Length']) # <--- Gets the size of data
@@ -59,7 +64,7 @@ class S(BaseHTTPRequestHandler):
 def http_server(server_class=ForkingServer, handler_class=S, port=8080):
     server_address = ('', port)
     httpd = server_class(server_address, handler_class)
-    cv2.ocl.setUseOpenCL(False)
+    cv2.ocl.setUseOpenCL(True)
     print('Starting httpd...')
     print(u"是否启用OpenCL：%s"%cv2.ocl.useOpenCL())
     httpd.serve_forever()
